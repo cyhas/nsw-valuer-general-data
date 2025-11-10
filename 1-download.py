@@ -10,7 +10,7 @@ URL_BASE = 'https://www.valuergeneral.nsw.gov.au/__psi/'
 WEEKLY_URL = URL_BASE + 'weekly/'
 YEARLY_URL = URL_BASE + 'yearly/'
 DOWNLOAD_DIR = 'data/'
-YEARS_TO_COLLECT = 35
+START_YEAR = 1990 
 RECENT_WEEKS_TO_EXCLUDE = 14  # Number of days to exclude from recent weekly downloads.
 RETRY_ATTEMPTS = 3
 
@@ -69,7 +69,7 @@ def main():
     end_weekly_date = today
 
     download_weekly_data(start_weekly_date, end_weekly_date)
-    download_yearly_data(today.year - YEARS_TO_COLLECT, today.year)
+    download_yearly_data(START_YEAR, today.year)
 
     logging.info('Complete: the data has been downloaded.')
     logging.info(f'Total elapsed time was {int(time.time() - start_time)} seconds')
