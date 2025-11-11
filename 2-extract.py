@@ -9,7 +9,7 @@ from datetime import datetime
 
 # --- Constants ---
 DATA_DIR = "./data"
-FINAL_CSV_PATH = "extract-3-very-clean.csv"
+FINAL_CSV_PATH = "cleaned.csv"
 LOG_FILE_PATH = "propsales.log"
 # --- Filtering Controls ---
 # Set to True to remove records with contract dates in the future
@@ -18,6 +18,7 @@ FILTER_FUTURE_DATES = True
 FILTER_PRE_1990_DATES = True
 EARLIEST_DATE = '1990-01-01'
 
+legal_descriptions = {}
 
 # --- Configure logging ---
 # Set up logging to file and console
@@ -242,6 +243,7 @@ def extract(zip_filepath):
     dat_lines = []
     try:
         with zipfile.ZipFile(zip_filepath, 'r') as zip_file:
+            logging.info(f"ZIP {zip_filepath} contains {len(zip_file.namelist())} files.")
             for file_info in zip_file.namelist():
                 if file_info.lower().endswith(".dat"):
                     try:
@@ -252,10 +254,25 @@ def extract(zip_filepath):
                             dat_lines.extend(processed_data)
                     except UnicodeDecodeError:
                         logging.warning(f"Skipping file with encoding issues in {zip_filepath}: {file_info}")
+                elif file_info.lower().endswith(".zip"):
+                    with zip_file.open(file_info) as inner_zip_file:
+                        with zipfile.ZipFile(io.BytesIO(inner_zip_file.read())) as inner_zip:
+                            for inner_file_info in inner_zip.namelist():
+                                if inner_file_info.lower().endswith(".dat"):
+                                    try:
+                                        content = inner_zip.read(inner_file_info).decode("utf-8")
+                                        data = content.splitlines()
+                                        for line in data:
+                                            processed_data = process_line(line)
+                                            dat_lines.extend(processed_data)
+                                    except UnicodeDecodeError:
+                                        logging.warning(f"Skipping file with encoding issues in nested zip {file_info}: {inner_file_info}")
     except FileNotFoundError:
         logging.error(f"File not found: {zip_filepath}")
     except zipfile.BadZipFile:
         logging.error(f"Bad zip file: {zip_filepath}")
+    except Exception as e:
+        logging.error(e)
     
     clean_save(dat_lines)
     
@@ -264,7 +281,6 @@ def extract(zip_filepath):
 def process_line(line: str):
     
     processed_record = []
-    legal_descriptions = {}
 
     if line.startswith("C;"):
         parts = line.split(";")
