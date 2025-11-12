@@ -1,39 +1,32 @@
 import duckdb
 
-suburb = "Box Hill"  # Change this to any suburb name.
+suburb = "Redfern"  # Change this to any suburb name.
 
-# Default query to get the 10 most recent sales in a suburb.
-query = f"""
+avg_med_twelve_months = f"""
+WITH classified AS (
+    SELECT
+        "Property locality" AS suburb,
+        CASE 
+            WHEN "Strata lot number" IS NULL OR trim(CAST("Strata lot number" AS VARCHAR)) = '' THEN 'House'
+            ELSE 'Unit'
+        END AS property_type,
+        "Purchase price"
+    FROM 'cleaned.csv'
+    WHERE lower("Property locality") = lower('{suburb}')
+      AND "Contract date" >= (current_date - INTERVAL 12 MONTH)
+)
 SELECT
-    "Property unit number" AS unit_no,
-    "Property house number" AS house_no,
-    "Property street name"  AS street,
-    "Property locality"     AS suburb,
-    "Contract date"         AS contract_date,
-    printf('%,.0f', "Purchase price")  AS price,
-    "Area"                  AS land_area,
-    "Zoning"                AS zoning
-FROM 'cleaned.csv'
-WHERE "Property locality" = '{suburb}'
-ORDER BY "Contract date" DESC
-LIMIT 10;
+    suburb,
+    printf('%,.0f', AVG(CASE WHEN property_type = 'House' THEN "Purchase price" END)) AS avg_price_house,
+    printf('%,.0f', percentile_cont(0.5) WITHIN GROUP (ORDER BY CASE WHEN property_type = 'House' THEN "Purchase price" END)) AS median_price_house,
+    COUNT(CASE WHEN property_type = 'House' THEN 1 END) AS house_sales,
+    printf('%,.0f', AVG(CASE WHEN property_type = 'Unit' THEN "Purchase price" END)) AS avg_price_unit,
+    printf('%,.0f', percentile_cont(0.5) WITHIN GROUP (ORDER BY CASE WHEN property_type = 'Unit' THEN "Purchase price" END)) AS median_price_unit,
+    COUNT(CASE WHEN property_type = 'Unit' THEN 1 END) AS unit_sales
+FROM classified
+GROUP BY suburb;
 """
 
-q = duckdb.query(query)
-print(q)
 
-print()
-
-avg_query = f"""
-SELECT 
-    "Property locality" AS suburb,
-    printf('%,.0f', AVG("Purchase price")) AS avg_price_12m,
-    COUNT(*) AS sales_count
-FROM 'cleaned.csv'
-WHERE lower("Property locality") = lower('{suburb}')
-  AND "Contract date" >= (current_date - INTERVAL 12 MONTH)
-GROUP BY "Property locality";
-"""
-
-q = duckdb.query(avg_query)
+q = duckdb.query(avg_med_twelve_months).df()
 print(q)
