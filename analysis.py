@@ -1,6 +1,6 @@
 import duckdb
 
-suburb = "Redfern"  # Change this to any suburb name.
+suburb = "Box Hill"  # Change this to any suburb name.
 
 # Default query to get the 10 most recent sales in a suburb.
 query = f"""
@@ -10,7 +10,7 @@ SELECT
     "Property street name"  AS street,
     "Property locality"     AS suburb,
     "Contract date"         AS contract_date,
-    "Purchase price"        AS price,
+    printf('%,.0f', "Purchase price")  AS price,
     "Area"                  AS land_area,
     "Zoning"                AS zoning
 FROM 'cleaned.csv'
@@ -19,15 +19,15 @@ ORDER BY "Contract date" DESC
 LIMIT 10;
 """
 
-df = duckdb.query(query).df()
-print(df)
+q = duckdb.query(query)
+print(q)
 
 print()
 
 avg_query = f"""
 SELECT 
     "Property locality" AS suburb,
-    AVG("Purchase price") AS avg_price_12m,
+    printf('%,.0f', AVG("Purchase price")) AS avg_price_12m,
     COUNT(*) AS sales_count
 FROM 'cleaned.csv'
 WHERE lower("Property locality") = lower('{suburb}')
@@ -35,5 +35,5 @@ WHERE lower("Property locality") = lower('{suburb}')
 GROUP BY "Property locality";
 """
 
-df_avg = duckdb.query(avg_query).df()
-print(df_avg)
+q = duckdb.query(avg_query)
+print(q)
