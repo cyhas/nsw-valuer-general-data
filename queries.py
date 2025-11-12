@@ -1,8 +1,4 @@
-import duckdb
-
-suburb = "Redfern"  # Change this to any suburb name.
-
-avg_med_twelve_months = f"""
+avg_med_twelve_months = """
 WITH classified AS (
     SELECT
         "Property locality" AS suburb,
@@ -26,7 +22,3 @@ SELECT
 FROM classified
 GROUP BY suburb;
 """
-
-
-q = duckdb.query(avg_med_twelve_months).df()
-print(q)
